@@ -151,7 +151,8 @@ src/main/java/br/com/gearedlogistics/gearedlogistics
     ├── catalogo/           #   Item de catálogo: Peça ou Material (+ preços e margem)
     ├── estoque/            #   Estoque, PosicaoEstoque e MovimentacaoEstoque
     ├── ordemservico/       #   OrdemServico, Servico e AplicacaoItem
-    └── orcamento/          #   Orcamento e ItemOrcamento (vinculado a uma OS)
+    ├── orcamento/          #   Orcamento e ItemOrcamento (vinculado a uma OS)
+    └── financeiro/         #   TransacaoComercial (Venda/Pagamento/Acordo) e NotaFiscal
 ```
 
 Cada módulo é autossuficiente: contém suas próprias camadas `Controller → Service → Repository`
@@ -365,6 +366,53 @@ curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/orcamen
 curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/orcamentos/1/itens \
   -H "Content-Type: application/json" \
   -d '{"descricao":"Troca de pastilhas","tipo":"MAO_DE_OBRA","quantidade":1,"valorUnitario":150.00}'
+```
+
+### Transações comerciais
+
+Base: `/api/transacoes`. Usa **herança JPA (JOINED)** com o discriminador `tipo`.
+
+| Método | Rota | Descrição | Status |
+| --- | --- | --- | --- |
+| `POST` | `/api/transacoes/vendas` | Cria uma venda (`formaPagamento`) | `201` / `400` / `404` / `409` |
+| `POST` | `/api/transacoes/pagamentos` | Cria um pagamento | `201` / `400` / `404` / `409` |
+| `POST` | `/api/transacoes/acordos` | Cria um acordo (`numeroParcelas`, `condicoes`) | `201` / `400` / `404` / `409` |
+| `GET` | `/api/transacoes?clienteId=&ordemServicoId=&status=&tipo=&page=0&size=20` | Lista (filtros opcionais) | `200` |
+| `GET` | `/api/transacoes/{id}` | Busca por id | `200` / `404` |
+| `POST` | `/api/transacoes/{id}/aprovar` | `Pendente` → `Aprovada` | `200` / `404` / `409` |
+| `POST` | `/api/transacoes/{id}/pagar` | `Aprovada` → `Paga` | `200` / `404` / `409` |
+| `POST` | `/api/transacoes/{id}/cancelar` | Cancela (`Pendente`/`Aprovada`) | `200` / `404` / `409` |
+| `POST` | `/api/transacoes/{id}/pagamentos` | Registra pagamento parcial/integral (**só `Pagamento`**) | `200` / `404` / `409` |
+| `POST` | `/api/transacoes/{id}/inadimplencia` | Marca inadimplente (só `Pagamento`) | `200` / `404` / `409` |
+| `POST` | `/api/transacoes/{id}/regularizar` | `Inadimplente` → `Quitado` | `200` / `404` / `409` |
+| `DELETE` | `/api/transacoes/{id}` | Exclui (só `Pendente`) | `204` / `404` / `409` |
+
+- Toda transação pertence a um **cliente** e pode referenciar uma **ordem de serviço** (que precisa
+  ser do mesmo cliente — **409** caso contrário).
+- Num `Pagamento`, `valorPago` acumula; ao atingir o `valorTotal` vira `Quitado` e a transação
+  passa a `Paga`.
+
+### Notas fiscais
+
+| Método | Rota | Descrição | Status |
+| --- | --- | --- | --- |
+| `POST` | `/api/notas-fiscais` | Emite a NF de uma transação (1 por transação) | `201` / `400` / `404` / `409` |
+| `GET` | `/api/notas-fiscais?transacaoId=&status=&page=0&size=20` | Lista (filtros opcionais) | `200` |
+| `GET` | `/api/notas-fiscais/{id}` | Busca por id | `200` / `404` |
+| `POST` | `/api/notas-fiscais/{id}/validar` | `Emitida` → `Válida` | `200` / `404` / `409` |
+| `POST` | `/api/notas-fiscais/{id}/cancelar` | `Emitida` → `Cancelada` | `200` / `404` / `409` |
+| `DELETE` | `/api/notas-fiscais/{id}` | Exclui (só `Emitida`) | `204` / `404` / `409` |
+
+Exemplo (venda e nota fiscal):
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/transacoes/vendas \
+  -H "Content-Type: application/json" \
+  -d '{"clienteId":1,"ordemServicoId":1,"valorTotal":350.00,"formaPagamento":"PIX"}'
+
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/notas-fiscais \
+  -H "Content-Type: application/json" \
+  -d '{"transacaoId":1,"numeroDocumento":"NF-0001","impostos":35.00}'
 ```
 
 ### Padrão de erro
