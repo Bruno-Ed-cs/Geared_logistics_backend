@@ -1,5 +1,6 @@
 package br.com.gearedlogistics.gearedlogistics.modules.usuarios.service;
 
+import br.com.gearedlogistics.gearedlogistics.modules.usuarios.domain.Usuario;
 import br.com.gearedlogistics.gearedlogistics.modules.usuarios.dto.UsuarioRequest;
 import br.com.gearedlogistics.gearedlogistics.modules.usuarios.dto.UsuarioResponse;
 import br.com.gearedlogistics.gearedlogistics.shared.dto.PageResponse;
@@ -16,4 +17,6 @@ public interface UsuarioService {
     UsuarioResponse atualizar(Long id, UsuarioRequest request);
 
     void excluir(Long id);
+
+    Usuario buscarEntidade(Long id);
 }

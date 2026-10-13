@@ -66,7 +66,9 @@ public class UsuarioServiceImpl implements UsuarioService {
         usuarioRepository.deleteById(id);
     }
 
-    private Usuario buscarEntidade(Long id) {
+    @Override
+    @Transactional(readOnly = true)
+    public Usuario buscarEntidade(Long id) {
         return usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(RECURSO, id));
     }

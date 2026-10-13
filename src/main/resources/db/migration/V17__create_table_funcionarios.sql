@@ -1,0 +1,25 @@
+CREATE TABLE funcionarios
+(
+    id                 BIGSERIAL PRIMARY KEY,
+    nome               VARCHAR(150)             NOT NULL,
+    cpf_cnpj           VARCHAR(20)              NOT NULL,
+    logradouro         VARCHAR(150),
+    numero             VARCHAR(20),
+    bairro             VARCHAR(100),
+    cidade             VARCHAR(100),
+    estado             VARCHAR(2),
+    cep                VARCHAR(10),
+    matricula          VARCHAR(30)              NOT NULL,
+    cargo              VARCHAR(20)              NOT NULL,
+    especialidade      VARCHAR(100),
+    nivel_acesso_admin INTEGER,
+    salario            NUMERIC(10, 2),
+    data_admissao      DATE,
+    ativo              BOOLEAN                  NOT NULL DEFAULT TRUE,
+    usuario_id         BIGINT REFERENCES usuarios (id),
+    criado_em          TIMESTAMP WITH TIME ZONE NOT NULL,
+    atualizado_em      TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT uk_funcionarios_cpf_cnpj UNIQUE (cpf_cnpj),
+    CONSTRAINT uk_funcionarios_matricula UNIQUE (matricula),
+    CONSTRAINT uk_funcionarios_usuario UNIQUE (usuario_id)
+);
