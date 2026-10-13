@@ -149,7 +149,8 @@ src/main/java/br/com/gearedlogistics/gearedlogistics
     ├── clientes/           #   Cliente (+ endereço embutido e telefones)
     ├── veiculos/           #   Veículo (vinculado a um Cliente)
     ├── catalogo/           #   Item de catálogo: Peça ou Material (+ preços e margem)
-    └── estoque/            #   Estoque, PosicaoEstoque e MovimentacaoEstoque
+    ├── estoque/            #   Estoque, PosicaoEstoque e MovimentacaoEstoque
+    └── ordemservico/       #   OrdemServico, Servico e AplicacaoItem
 ```
 
 Cada módulo é autossuficiente: contém suas próprias camadas `Controller → Service → Repository`
@@ -294,6 +295,44 @@ Exemplo (entrada de estoque):
 curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/movimentacoes \
   -H "Content-Type: application/json" \
   -d '{"estoqueId":1,"itemId":1,"tipo":"ENTRADA","quantidade":50,"motivo":"compra do fornecedor"}'
+```
+
+### Ordens de serviço
+
+| Método | Rota | Descrição | Status |
+| --- | --- | --- | --- |
+| `POST` | `/api/ordens-servico` | Abre uma OS (cliente + veículo + problema) | `201` / `400` / `409` |
+| `GET` | `/api/ordens-servico?status=&clienteId=&veiculoId=&page=0&size=20` | Lista paginada (filtros opcionais) | `200` |
+| `GET` | `/api/ordens-servico/{id}` | Busca por id | `200` / `404` |
+| `POST` | `/api/ordens-servico/{id}/servicos` | Adiciona mão de obra | `201` / `404` / `409` |
+| `POST` | `/api/ordens-servico/{id}/itens` | Aplica peça/material (**dá baixa no estoque**) | `201` / `404` / `409` |
+| `POST` | `/api/ordens-servico/{id}/iniciar` | `Aberta` → `EmAndamento` | `200` / `404` / `409` |
+| `POST` | `/api/ordens-servico/{id}/concluir` | `EmAndamento` → `Concluída` | `200` / `404` / `409` |
+| `POST` | `/api/ordens-servico/{id}/cancelar` | Cancela (só `Aberta`/`EmAndamento`) | `200` / `404` / `409` |
+| `DELETE` | `/api/ordens-servico/{id}` | Exclui (só `Aberta`) | `204` / `404` / `409` |
+
+- A resposta traz `numero` (`OS-000001`), `progresso` (derivado do status) e os totais
+  `valorMaoDeObra`, `valorItens` e `valorTotal`.
+- **Aplicar um item dá baixa no estoque**: é preciso informar o `estoqueId`; se não houver saldo,
+  retorna **409**.
+- O veículo precisa pertencer ao cliente informado (**409** caso contrário).
+- O orçamento ainda **não** faz parte deste módulo (próximo passo).
+
+Exemplo (abrir uma OS e aplicar uma peça):
+
+```bash
+# abre a OS
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/ordens-servico \
+  -H "Content-Type: application/json" \
+  -d '{"clienteId":1,"veiculoId":1,"descricaoProblema":"Freios rangendo ao frear"}'
+
+# adiciona mão de obra
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/ordens-servico/1/servicos \
+  -H "Content-Type: application/json" -d '{"descricao":"Troca de pastilhas","valorMaoDeObra":150.00}'
+
+# aplica 2 unidades do item 1, debitando do estoque 1
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/ordens-servico/1/itens \
+  -H "Content-Type: application/json" -d '{"itemId":1,"quantidade":2,"estoqueId":1}'
 ```
 
 ### Padrão de erro
