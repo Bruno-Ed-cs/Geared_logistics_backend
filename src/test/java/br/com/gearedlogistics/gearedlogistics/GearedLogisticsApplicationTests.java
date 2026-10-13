@@ -1,4 +1,4 @@
-package br.com.gearedlogistics.geared_logistics;
+package br.com.gearedlogistics.gearedlogistics;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
