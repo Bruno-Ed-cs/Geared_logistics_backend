@@ -18,6 +18,7 @@ public record OrdemServicoResponse(
         String descricaoProblema,
         List<ServicoResponse> servicos,
         List<AplicacaoItemResponse> itensAplicados,
+        List<FuncionarioAlocadoResponse> funcionarios,
         BigDecimal valorMaoDeObra,
         BigDecimal valorItens,
         BigDecimal valorTotal,

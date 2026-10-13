@@ -3,6 +3,7 @@ package br.com.gearedlogistics.gearedlogistics.modules.ordemservico;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.domain.StatusOrdemServico;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.dto.AplicacaoItemRequest;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.dto.AplicacaoItemResponse;
+import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.dto.AlocarFuncionarioRequest;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.dto.OrdemServicoRequest;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.dto.OrdemServicoResponse;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.dto.ServicoRequest;
@@ -67,6 +68,18 @@ public class OrdemServicoController {
     @PostMapping("/{id}/iniciar")
     public OrdemServicoResponse iniciar(@PathVariable Long id) {
         return ordemServicoService.iniciar(id);
+    }
+
+    @PostMapping("/{id}/funcionarios")
+    public OrdemServicoResponse alocarFuncionario(@PathVariable Long id,
+                                                  @Valid @RequestBody AlocarFuncionarioRequest request) {
+        return ordemServicoService.alocarFuncionario(id, request.funcionarioId());
+    }
+
+    @DeleteMapping("/{id}/funcionarios/{funcionarioId}")
+    public OrdemServicoResponse desalocarFuncionario(@PathVariable Long id,
+                                                     @PathVariable Long funcionarioId) {
+        return ordemServicoService.desalocarFuncionario(id, funcionarioId);
     }
 
     @PostMapping("/{id}/concluir")

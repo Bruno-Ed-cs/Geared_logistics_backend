@@ -26,6 +26,10 @@ public interface OrdemServicoService {
 
     OrdemServicoResponse iniciar(Long id);
 
+    OrdemServicoResponse alocarFuncionario(Long id, Long funcionarioId);
+
+    OrdemServicoResponse desalocarFuncionario(Long id, Long funcionarioId);
+
     OrdemServicoResponse concluir(Long id);
 
     OrdemServicoResponse cancelar(Long id);

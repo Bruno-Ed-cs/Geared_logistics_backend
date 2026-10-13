@@ -5,6 +5,7 @@ import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.domain.OrdemS
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.domain.Servico;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.domain.StatusOrdemServico;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.dto.AplicacaoItemResponse;
+import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.dto.FuncionarioAlocadoResponse;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.dto.OrdemServicoResponse;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.dto.ServicoResponse;
 import org.springframework.stereotype.Component;
@@ -23,6 +24,10 @@ public class OrdemServicoMapper {
 
         List<AplicacaoItemResponse> itensAplicados = os.getItensAplicados().stream()
                 .map(this::toAplicacaoItemResponse)
+                .toList();
+
+        List<FuncionarioAlocadoResponse> funcionarios = os.getFuncionarios().stream()
+                .map(f -> new FuncionarioAlocadoResponse(f.getId(), f.getNome(), f.getCargo()))
                 .toList();
 
         BigDecimal valorMaoDeObra = os.getServicos().stream()
@@ -46,6 +51,7 @@ public class OrdemServicoMapper {
                 os.getDescricaoProblema(),
                 servicos,
                 itensAplicados,
+                funcionarios,
                 valorMaoDeObra,
                 valorItens,
                 valorMaoDeObra.add(valorItens),

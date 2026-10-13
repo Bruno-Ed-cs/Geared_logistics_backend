@@ -9,6 +9,8 @@ import br.com.gearedlogistics.gearedlogistics.modules.estoque.domain.TipoMovimen
 import br.com.gearedlogistics.gearedlogistics.modules.estoque.dto.MovimentacaoRequest;
 import br.com.gearedlogistics.gearedlogistics.modules.estoque.service.EstoqueService;
 import br.com.gearedlogistics.gearedlogistics.modules.estoque.service.MovimentacaoEstoqueService;
+import br.com.gearedlogistics.gearedlogistics.modules.funcionarios.domain.Funcionario;
+import br.com.gearedlogistics.gearedlogistics.modules.funcionarios.service.FuncionarioService;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.domain.AplicacaoItem;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.domain.OrdemServico;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.domain.Servico;
@@ -51,6 +53,7 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
     private final ItemService itemService;
     private final EstoqueService estoqueService;
     private final MovimentacaoEstoqueService movimentacaoEstoqueService;
+    private final FuncionarioService funcionarioService;
 
     @Override
     @Transactional
@@ -139,6 +142,28 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
             throw new BusinessException("Só é possível iniciar uma OS com status ABERTA");
         }
         ordem.setStatus(StatusOrdemServico.EM_ANDAMENTO);
+        return ordemServicoMapper.toResponse(ordemServicoRepository.saveAndFlush(ordem));
+    }
+
+    @Override
+    @Transactional
+    public OrdemServicoResponse alocarFuncionario(Long id, Long funcionarioId) {
+        OrdemServico ordem = buscarEntidade(id);
+        exigirEditavel(ordem);
+        Funcionario funcionario = funcionarioService.buscarEntidade(funcionarioId);
+        ordem.getFuncionarios().add(funcionario);
+        return ordemServicoMapper.toResponse(ordemServicoRepository.saveAndFlush(ordem));
+    }
+
+    @Override
+    @Transactional
+    public OrdemServicoResponse desalocarFuncionario(Long id, Long funcionarioId) {
+        OrdemServico ordem = buscarEntidade(id);
+        boolean removido = ordem.getFuncionarios().removeIf(
+                funcionario -> funcionario.getId().equals(funcionarioId));
+        if (!removido) {
+            throw new ResourceNotFoundException("Funcionário alocado na OS", funcionarioId);
+        }
         return ordemServicoMapper.toResponse(ordemServicoRepository.saveAndFlush(ordem));
     }
 
