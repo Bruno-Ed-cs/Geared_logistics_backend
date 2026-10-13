@@ -148,6 +148,7 @@ src/main/java/br/com/gearedlogistics/gearedlogistics
     ├── usuarios/           #   Acesso ao sistema (login)
     ├── clientes/           #   Cliente (+ endereço embutido e telefones)
     ├── veiculos/           #   Veículo (vinculado a um Cliente)
+    ├── funcionarios/       #   Funcionario (Gerente/Mecanico)
     ├── catalogo/           #   Item de catálogo: Peça ou Material (+ preços e margem)
     ├── estoque/            #   Estoque, PosicaoEstoque e MovimentacaoEstoque
     ├── ordemservico/       #   OrdemServico, Servico e AplicacaoItem
@@ -308,6 +309,8 @@ curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/movimen
 | `GET` | `/api/ordens-servico/{id}` | Busca por id | `200` / `404` |
 | `POST` | `/api/ordens-servico/{id}/servicos` | Adiciona mão de obra | `201` / `404` / `409` |
 | `POST` | `/api/ordens-servico/{id}/itens` | Aplica peça/material (**dá baixa no estoque**) | `201` / `404` / `409` |
+| `POST` | `/api/ordens-servico/{id}/funcionarios` | Aloca um funcionário na OS | `200` / `404` / `409` |
+| `DELETE` | `/api/ordens-servico/{id}/funcionarios/{funcionarioId}` | Desaloca um funcionário | `200` / `404` |
 | `POST` | `/api/ordens-servico/{id}/iniciar` | `Aberta` → `EmAndamento` | `200` / `404` / `409` |
 | `POST` | `/api/ordens-servico/{id}/concluir` | `EmAndamento` → `Concluída` | `200` / `404` / `409` |
 | `POST` | `/api/ordens-servico/{id}/cancelar` | Cancela (só `Aberta`/`EmAndamento`) | `200` / `404` / `409` |
@@ -413,6 +416,28 @@ curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/transac
 curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/notas-fiscais \
   -H "Content-Type: application/json" \
   -d '{"transacaoId":1,"numeroDocumento":"NF-0001","impostos":35.00}'
+```
+
+### Funcionários
+
+| Método | Rota | Descrição | Status |
+| --- | --- | --- | --- |
+| `POST` | `/api/funcionarios` | Cria um funcionário (`Gerente`/`Mecanico`) | `201` / `400` / `404` / `409` |
+| `GET` | `/api/funcionarios?nome=&cargo=&page=0&size=20` | Lista paginada (filtros opcionais) | `200` |
+| `GET` | `/api/funcionarios/{id}` | Busca por id | `200` / `404` |
+| `PUT` | `/api/funcionarios/{id}` | Atualiza um funcionário | `200` / `404` / `409` |
+| `DELETE` | `/api/funcionarios/{id}` | Remove um funcionário | `204` / `404` / `409` |
+
+- `cargo` = `GERENTE` ou `MECANICO`; `especialidade` (mecânico) e `nivelAcessoAdmin` (gerente) são opcionais.
+- `matricula` e `cpfCnpj` são únicos; `usuarioId` (opcional) vincula o funcionário a um usuário de login
+  e é único por funcionário — o vínculo com o `usuarios` fica separado do cadastro de RH.
+
+Exemplo:
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/funcionarios \
+  -H "Content-Type: application/json" \
+  -d '{"nome":"Carlos Mecânico","cpfCnpj":"529.982.247-25","matricula":"MEC-001","cargo":"MECANICO","especialidade":"Suspensão"}'
 ```
 
 ### Padrão de erro
