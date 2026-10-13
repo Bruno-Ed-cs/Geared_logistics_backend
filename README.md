@@ -89,6 +89,18 @@ Na raiz do backend (`Geared_logistics_backend`):
 
 A aplicação sobe em **http://localhost:8080**.
 
+### Primeiro acesso
+
+O banco já é semeado com um administrador inicial (migration `V2__seed_admin.sql`):
+
+| Campo | Valor |
+| --- | --- |
+| E-mail | `admin@gearedlogistics.com` |
+| Senha | `admin123` |
+
+> ⚠️ **Troque a senha após o primeiro acesso.** Use este usuário para obter o token em
+> `POST /api/auth/login` — veja a seção [Autenticação](#autenticação).
+
 Para gerar o pacote executável:
 
 ```bash
