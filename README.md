@@ -138,24 +138,20 @@ src/main/java/br/com/gearedlogistics/gearedlogistics
 ├── GearedLogisticsApplication.java
 ├── config/                 # Configurações do Spring (OpenAPI, CORS, Jackson, JPA Auditing, Security/JWT)
 ├── shared/                 # Código transversal reutilizado por todos os módulos
-│   ├── domain/             #   BaseEntity (id + timestamps de auditoria)
+│   ├── domain/             #   BaseEntity, Pessoa, Endereco (base para pessoas do domínio)
 │   ├── dto/                #   ApiError, PageResponse
 │   ├── exception/          #   Exceções + GlobalExceptionHandler
-│   └── mapper/             #   Contrato BaseMapper
+│   ├── mapper/             #   Contrato BaseMapper
+│   └── validation/         #   @CpfCnpj (validação de CPF/CNPJ)
 └── modules/                # Um pacote por domínio de negócio
     ├── autenticacao/       #   Login e emissão do token JWT
-    └── usuarios/
-        ├── UsuarioController.java
-        ├── domain/         #   Entidade + enums
-        ├── repository/     #   Spring Data JPA
-        ├── security/       #   UserDetailsService (usado no login)
-        ├── service/        #   Interface + implementação
-        ├── dto/            #   Request / Response
-        └── mapper/         #   Conversão Entidade <-> DTO
+    ├── usuarios/           #   Acesso ao sistema (login)
+    ├── clientes/           #   Cliente (+ endereço embutido e telefones)
+    └── veiculos/           #   Veículo (vinculado a um Cliente)
 ```
 
 Cada módulo é autossuficiente: contém suas próprias camadas `Controller → Service → Repository`
-+ `domain/dto/mapper`. Para criar um novo domínio, basta replicar a pasta `usuarios/`.
++ `domain/dto/mapper`. Para criar um novo domínio, basta replicar uma das pastas de `modules/`.
 
 ---
 
@@ -193,29 +189,68 @@ informar o token.
 
 ## Endpoints
 
-Base: `/api`
+Base: `/api`. Todas as rotas exigem token, exceto o login.
 
-| Método | Rota | Descrição | Status | Auth |
-| --- | --- | --- | --- | --- |
-| `POST` | `/api/auth/login` | Autentica e devolve o token JWT | `200` / `401` | Não |
-| `POST` | `/api/usuarios` | Cria um usuário | `201` | Sim |
-| `GET` | `/api/usuarios?page=0&size=20` | Lista paginada | `200` | Sim |
-| `GET` | `/api/usuarios/{id}` | Busca por id | `200` / `404` | Sim |
-| `PUT` | `/api/usuarios/{id}` | Atualiza um usuário | `200` / `404` | Sim |
-| `DELETE` | `/api/usuarios/{id}` | Remove um usuário | `204` / `404` | Sim |
+### Autenticação
 
-Exemplo (criar usuário com token):
+| Método | Rota | Descrição | Status |
+| --- | --- | --- | --- |
+| `POST` | `/api/auth/login` | Autentica e devolve o token JWT | `200` / `401` |
+
+### Usuários
+
+| Método | Rota | Descrição | Status |
+| --- | --- | --- | --- |
+| `POST` | `/api/usuarios` | Cria um usuário | `201` / `409` |
+| `GET` | `/api/usuarios?page=0&size=20` | Lista paginada | `200` |
+| `GET` | `/api/usuarios/{id}` | Busca por id | `200` / `404` |
+| `PUT` | `/api/usuarios/{id}` | Atualiza um usuário | `200` / `404` |
+| `DELETE` | `/api/usuarios/{id}` | Remove um usuário | `204` / `404` |
+
+### Clientes
+
+| Método | Rota | Descrição | Status |
+| --- | --- | --- | --- |
+| `POST` | `/api/clientes` | Cria um cliente (CPF ou CNPJ) | `201` / `400` / `409` |
+| `GET` | `/api/clientes?nome=&cpfCnpj=&page=0&size=20` | Lista paginada (filtros opcionais) | `200` |
+| `GET` | `/api/clientes/{id}` | Busca por id | `200` / `404` |
+| `PUT` | `/api/clientes/{id}` | Atualiza um cliente | `200` / `404` |
+| `DELETE` | `/api/clientes/{id}` | Remove um cliente | `204` / `404` |
+
+### Veículos
+
+| Método | Rota | Descrição | Status |
+| --- | --- | --- | --- |
+| `POST` | `/api/veiculos` | Cria um veículo vinculado a um cliente | `201` / `404` / `409` |
+| `GET` | `/api/veiculos?placa=&clienteId=&page=0&size=20` | Lista paginada (filtros opcionais) | `200` |
+| `GET` | `/api/veiculos/{id}` | Busca por id | `200` / `404` |
+| `PUT` | `/api/veiculos/{id}` | Atualiza um veículo | `200` / `404` |
+| `DELETE` | `/api/veiculos/{id}` | Remove um veículo | `204` / `404` |
+
+Exemplo (criar cliente com token):
 
 ```bash
-curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/usuarios \
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/clientes \
   -H "Content-Type: application/json" \
   -d '{
-        "nome": "Ana Souza",
-        "email": "ana@gearedlogistics.com",
-        "senha": "secret123",
-        "perfil": "ADMIN",
-        "ativo": true
+        "nome": "João Silva",
+        "cpfCnpj": "111.444.777-35",
+        "email": "joao@email.com",
+        "profissao": "Mecânico",
+        "endereco": {
+          "logradouro": "Rua das Flores", "numero": "123", "bairro": "Centro",
+          "cidade": "Mossoró", "estado": "RN", "cep": "59600-000"
+        },
+        "telefones": ["(84) 99999-1111"]
       }'
+```
+
+Exemplo (criar veículo do cliente 1):
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/veiculos \
+  -H "Content-Type: application/json" \
+  -d '{"placa":"ABC1D23","marca":"Chevrolet","modelo":"Onix","tipo":"Carro","anoFabricacao":2020,"clienteId":1}'
 ```
 
 ### Padrão de erro
@@ -240,4 +275,7 @@ Todas as falhas retornam o mesmo corpo (`ApiError`):
 - As senhas são gravadas como hash **BCrypt**.
 - A autenticação é via **JWT** (HS256), assinado com o `JWT_SECRET`; a expiração é `jwt.expiration`.
 - O administrador inicial do seed (`admin@gearedlogistics.com / admin123`) deve ter a senha trocada.
+- O domínio (Clientes, Veículos e os próximos módulos) segue o **modelo conceitual** documentado no
+  repositório `Geared_logistics` (diagramas de classe, MER e casos de uso).
+- CPF e CNPJ são validados pelo `@CpfCnpj` (dígitos verificadores).
 - O CORS já está configurado em `CorsConfig` liberando `/api/**` para o app React Native.
