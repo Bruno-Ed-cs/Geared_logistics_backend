@@ -153,7 +153,9 @@ src/main/java/br/com/gearedlogistics/gearedlogistics
     ├── estoque/            #   Estoque, PosicaoEstoque e MovimentacaoEstoque
     ├── ordemservico/       #   OrdemServico, Servico e AplicacaoItem
     ├── orcamento/          #   Orcamento e ItemOrcamento (vinculado a uma OS)
-    └── financeiro/         #   TransacaoComercial (Venda/Pagamento/Acordo) e NotaFiscal
+    ├── financeiro/         #   TransacaoComercial (Venda/Pagamento/Acordo) e NotaFiscal
+    ├── fornecedores/       #   Fornecedor de peças e materiais
+    └── compras/            #   Pedido, ItemPedido e Rastreamento
 ```
 
 Cada módulo é autossuficiente: contém suas próprias camadas `Controller → Service → Repository`
@@ -438,6 +440,48 @@ Exemplo:
 curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/funcionarios \
   -H "Content-Type: application/json" \
   -d '{"nome":"Carlos Mecânico","cpfCnpj":"529.982.247-25","matricula":"MEC-001","cargo":"MECANICO","especialidade":"Suspensão"}'
+```
+
+### Fornecedores
+
+| Método | Rota | Descrição | Status |
+| --- | --- | --- | --- |
+| `POST` | `/api/fornecedores` | Cria um fornecedor | `201` / `400` / `409` |
+| `GET` | `/api/fornecedores?nome=&cnpj=&page=0&size=20` | Lista paginada (filtros opcionais) | `200` |
+| `GET` | `/api/fornecedores/{id}` | Busca por id | `200` / `404` |
+| `PUT` | `/api/fornecedores/{id}` | Atualiza um fornecedor | `200` / `404` / `409` |
+| `DELETE` | `/api/fornecedores/{id}` | Remove um fornecedor | `204` / `404` / `409` |
+
+### Pedidos de compra
+
+| Método | Rota | Descrição | Status |
+| --- | --- | --- | --- |
+| `POST` | `/api/pedidos` | Cria um pedido (`SOLICITADO`) | `201` / `400` / `404` |
+| `GET` | `/api/pedidos?fornecedorId=&status=&page=0&size=20` | Lista paginada (filtros opcionais) | `200` |
+| `GET` | `/api/pedidos/{id}` | Busca por id | `200` / `404` |
+| `POST` | `/api/pedidos/{id}/itens` | Adiciona item (só `Solicitado`) | `201` / `404` / `409` |
+| `DELETE` | `/api/pedidos/{id}/itens/{itemId}` | Remove um item (só `Solicitado`) | `204` / `404` / `409` |
+| `POST` | `/api/pedidos/{id}/processar` | `Solicitado` → `EmProcessamento` | `200` / `404` / `409` |
+| `POST` | `/api/pedidos/{id}/enviar` | `EmProcessamento` → `Enviado` | `200` / `404` / `409` |
+| `POST` | `/api/pedidos/{id}/entregar` | `Enviado` → `Entregue` (**entrada no estoque**) | `200` / `404` / `409` |
+| `POST` | `/api/pedidos/{id}/extraviar` | `Enviado` → `Extraviado` | `200` / `404` / `409` |
+| `POST` | `/api/pedidos/{id}/cancelar` | `Solicitado`/`EmProcessamento` → `Cancelado` | `200` / `404` / `409` |
+| `POST` | `/api/pedidos/{id}/rastreamento` | Define o rastreio (só `EmProcessamento`/`Enviado`) | `201` / `404` / `409` |
+| `PUT` | `/api/pedidos/{id}/rastreamento` | Atualiza a localização do rastreio | `200` / `404` |
+| `DELETE` | `/api/pedidos/{id}` | Exclui (só `Solicitado`) | `204` / `404` / `409` |
+
+- O pedido guarda o **estoque de destino**; ao **entregar**, cada item gera uma **ENTRADA** nesse estoque.
+- O `Rastreamento` é 1:1 com o pedido (`codigoRastreio`, `statusLocalizacao`, `dataAtualizacao`).
+
+Exemplo:
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/pedidos \
+  -H "Content-Type: application/json" -d '{"fornecedorId":1,"estoqueDestinoId":1}'
+
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/pedidos/1/itens \
+  -H "Content-Type: application/json" \
+  -d '{"itemId":1,"quantidadeSolicitada":10,"precoNegociado":60.00}'
 ```
 
 ### Padrão de erro
