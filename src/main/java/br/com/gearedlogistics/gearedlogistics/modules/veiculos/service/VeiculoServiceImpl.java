@@ -74,7 +74,9 @@ public class VeiculoServiceImpl implements VeiculoService {
         veiculoRepository.deleteById(id);
     }
 
-    private Veiculo buscarEntidade(Long id) {
+    @Override
+    @Transactional(readOnly = true)
+    public Veiculo buscarEntidade(Long id) {
         return veiculoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(RECURSO, id));
     }

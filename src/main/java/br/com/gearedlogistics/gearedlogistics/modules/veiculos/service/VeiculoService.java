@@ -1,5 +1,6 @@
 package br.com.gearedlogistics.gearedlogistics.modules.veiculos.service;
 
+import br.com.gearedlogistics.gearedlogistics.modules.veiculos.domain.Veiculo;
 import br.com.gearedlogistics.gearedlogistics.modules.veiculos.dto.VeiculoRequest;
 import br.com.gearedlogistics.gearedlogistics.modules.veiculos.dto.VeiculoResponse;
 import br.com.gearedlogistics.gearedlogistics.shared.dto.PageResponse;
@@ -16,4 +17,6 @@ public interface VeiculoService {
     VeiculoResponse atualizar(Long id, VeiculoRequest request);
 
     void excluir(Long id);
+
+    Veiculo buscarEntidade(Long id);
 }
