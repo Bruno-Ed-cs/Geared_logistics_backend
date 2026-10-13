@@ -2,13 +2,17 @@ package br.com.gearedlogistics.gearedlogistics.shared.exception;
 
 import br.com.gearedlogistics.gearedlogistics.shared.dto.ApiError;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.Instant;
 import java.util.List;
@@ -41,6 +45,36 @@ public class GlobalExceptionHandler {
                 .toList();
         return build(HttpStatus.BAD_REQUEST, "Dados inválidos",
                 "Falha de validação nos campos enviados", request, detalhes);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleNotReadable(HttpMessageNotReadableException ex,
+                                                      HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Requisição inválida",
+                "O corpo da requisição está ausente ou malformado", request, List.of());
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
+                                                       HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Parâmetro inválido",
+                "Valor inválido para o parâmetro '" + ex.getName() + "'", request, List.of());
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiError> handleConstraintViolation(ConstraintViolationException ex,
+                                                              HttpServletRequest request) {
+        List<String> detalhes = ex.getConstraintViolations().stream()
+                .map(violacao -> violacao.getPropertyPath() + ": " + violacao.getMessage())
+                .toList();
+        return build(HttpStatus.BAD_REQUEST, "Dados inválidos", "Falha de validação", request, detalhes);
+    }
+
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ApiError> handlePropertyReference(PropertyReferenceException ex,
+                                                            HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Parâmetro inválido",
+                "Propriedade de ordenação/filtro inexistente: " + ex.getPropertyName(), request, List.of());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
