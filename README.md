@@ -150,7 +150,8 @@ src/main/java/br/com/gearedlogistics/gearedlogistics
     ├── veiculos/           #   Veículo (vinculado a um Cliente)
     ├── catalogo/           #   Item de catálogo: Peça ou Material (+ preços e margem)
     ├── estoque/            #   Estoque, PosicaoEstoque e MovimentacaoEstoque
-    └── ordemservico/       #   OrdemServico, Servico e AplicacaoItem
+    ├── ordemservico/       #   OrdemServico, Servico e AplicacaoItem
+    └── orcamento/          #   Orcamento e ItemOrcamento (vinculado a uma OS)
 ```
 
 Cada módulo é autossuficiente: contém suas próprias camadas `Controller → Service → Repository`
@@ -316,7 +317,7 @@ curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/movimen
 - **Aplicar um item dá baixa no estoque**: é preciso informar o `estoqueId`; se não houver saldo,
   retorna **409**.
 - O veículo precisa pertencer ao cliente informado (**409** caso contrário).
-- O orçamento ainda **não** faz parte deste módulo (próximo passo).
+- **Cancelar ou excluir** uma OS devolve ao estoque os itens já aplicados (estorno automático).
 
 Exemplo (abrir uma OS e aplicar uma peça):
 
@@ -333,6 +334,37 @@ curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/ordens-
 # aplica 2 unidades do item 1, debitando do estoque 1
 curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/ordens-servico/1/itens \
   -H "Content-Type: application/json" -d '{"itemId":1,"quantidade":2,"estoqueId":1}'
+```
+
+### Orçamentos
+
+| Método | Rota | Descrição | Status |
+| --- | --- | --- | --- |
+| `POST` | `/api/orcamentos` | Cria um orçamento para uma OS | `201` / `400` / `404` / `409` |
+| `GET` | `/api/orcamentos?ordemServicoId=&status=&page=0&size=20` | Lista paginada (filtros opcionais) | `200` |
+| `GET` | `/api/orcamentos/{id}` | Busca por id | `200` / `404` |
+| `POST` | `/api/orcamentos/{id}/itens` | Adiciona uma linha (mão de obra ou peça) | `201` / `404` / `409` |
+| `DELETE` | `/api/orcamentos/{id}/itens/{itemId}` | Remove uma linha (só `Rascunho`) | `204` / `404` / `409` |
+| `POST` | `/api/orcamentos/{id}/enviar` | `Rascunho` → `Enviado` (exige itens) | `200` / `404` / `409` |
+| `POST` | `/api/orcamentos/{id}/aprovar` | `Enviado` → `Aprovado` | `200` / `404` / `409` |
+| `POST` | `/api/orcamentos/{id}/rejeitar` | `Enviado` → `Rejeitado` | `200` / `404` / `409` |
+| `POST` | `/api/orcamentos/{id}/cancelar` | `Rascunho` → `Cancelado` | `200` / `404` / `409` |
+| `POST` | `/api/orcamentos/{id}/expirar` | `Enviado` vencido → `Expirado` | `200` / `404` / `409` |
+| `DELETE` | `/api/orcamentos/{id}` | Exclui (só `Rascunho`) | `204` / `404` / `409` |
+
+- Cada linha tem um `tipo` (`MAO_DE_OBRA` ou `PECA`) e, opcionalmente, referencia um `itemId` do catálogo.
+- `valorTotal` = soma de `quantidade × valorUnitario`; a resposta indica `vencido` quando está
+  `Enviado` e a `dataValidade` já passou.
+
+Exemplo (criar orçamento e adicionar mão de obra):
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/orcamentos \
+  -H "Content-Type: application/json" -d '{"ordemServicoId":1,"dataValidade":"2026-12-31"}'
+
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/orcamentos/1/itens \
+  -H "Content-Type: application/json" \
+  -d '{"descricao":"Troca de pastilhas","tipo":"MAO_DE_OBRA","quantidade":1,"valorUnitario":150.00}'
 ```
 
 ### Padrão de erro
