@@ -77,6 +77,11 @@ um novo arquivo seguindo o padrão `V2__descricao.sql`.
 A `V2__seed_admin.sql` cria um administrador inicial para o bootstrap — veja a seção
 [Autenticação](#autenticação).
 
+A `V23__seed_dados_exemplo.sql` popula o banco com **dados de exemplo** (clientes, veículos, itens,
+estoque, fornecedor, funcionários, um pedido, uma OS e um orçamento). É idempotente
+(`ON CONFLICT`/`WHERE NOT EXISTS`), então pode rodar sobre um banco já populado sem duplicar.
+Em um banco limpo basta subir a aplicação para ter dados prontos.
+
 ---
 
 ## Como rodar
