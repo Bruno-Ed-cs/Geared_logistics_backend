@@ -2,6 +2,7 @@ package br.com.gearedlogistics.gearedlogistics.shared.exception;
 
 import br.com.gearedlogistics.gearedlogistics.shared.dto.ApiError;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
@@ -40,6 +41,13 @@ public class GlobalExceptionHandler {
                 .toList();
         return build(HttpStatus.BAD_REQUEST, "Dados inválidos",
                 "Falha de validação nos campos enviados", request, detalhes);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex,
+                                                        HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, "Operação não permitida",
+                "O registro possui vínculos ou viola uma restrição de integridade", request, List.of());
     }
 
     @ExceptionHandler(Exception.class)
