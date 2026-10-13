@@ -1,6 +1,7 @@
 package br.com.gearedlogistics.gearedlogistics.modules.ordemservico.domain;
 
 import br.com.gearedlogistics.gearedlogistics.modules.catalogo.domain.Item;
+import br.com.gearedlogistics.gearedlogistics.modules.estoque.domain.Estoque;
 import br.com.gearedlogistics.gearedlogistics.shared.domain.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -28,6 +29,11 @@ public class AplicacaoItem extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "item_id", nullable = false)
     private Item item;
+
+    /** Estoque de onde o item foi debitado (para estorno em caso de cancelamento). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "estoque_id")
+    private Estoque estoque;
 
     @Column(name = "quantidade", nullable = false)
     private Integer quantidade;

@@ -1,5 +1,6 @@
 package br.com.gearedlogistics.gearedlogistics.modules.ordemservico.service;
 
+import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.domain.OrdemServico;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.domain.StatusOrdemServico;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.dto.AplicacaoItemRequest;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.dto.AplicacaoItemResponse;
@@ -30,4 +31,6 @@ public interface OrdemServicoService {
     OrdemServicoResponse cancelar(Long id);
 
     void excluir(Long id);
+
+    OrdemServico buscarEntidade(Long id);
 }

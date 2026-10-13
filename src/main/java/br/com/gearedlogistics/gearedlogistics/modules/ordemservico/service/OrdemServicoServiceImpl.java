@@ -4,8 +4,10 @@ import br.com.gearedlogistics.gearedlogistics.modules.catalogo.domain.Item;
 import br.com.gearedlogistics.gearedlogistics.modules.catalogo.service.ItemService;
 import br.com.gearedlogistics.gearedlogistics.modules.clientes.domain.Cliente;
 import br.com.gearedlogistics.gearedlogistics.modules.clientes.service.ClienteService;
+import br.com.gearedlogistics.gearedlogistics.modules.estoque.domain.Estoque;
 import br.com.gearedlogistics.gearedlogistics.modules.estoque.domain.TipoMovimentacao;
 import br.com.gearedlogistics.gearedlogistics.modules.estoque.dto.MovimentacaoRequest;
+import br.com.gearedlogistics.gearedlogistics.modules.estoque.service.EstoqueService;
 import br.com.gearedlogistics.gearedlogistics.modules.estoque.service.MovimentacaoEstoqueService;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.domain.AplicacaoItem;
 import br.com.gearedlogistics.gearedlogistics.modules.ordemservico.domain.OrdemServico;
@@ -47,6 +49,7 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
     private final ClienteService clienteService;
     private final VeiculoService veiculoService;
     private final ItemService itemService;
+    private final EstoqueService estoqueService;
     private final MovimentacaoEstoqueService movimentacaoEstoqueService;
 
     @Override
@@ -104,19 +107,21 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
         exigirEditavel(ordem);
 
         Item item = itemService.buscarEntidade(request.itemId());
+        Estoque estoque = estoqueService.buscarEntidade(request.estoqueId());
         BigDecimal preco = request.precoUnitario() != null
                 ? request.precoUnitario()
                 : (item.getPrecoVenda() != null ? item.getPrecoVenda() : BigDecimal.ZERO);
 
         AplicacaoItem aplicacao = new AplicacaoItem();
         aplicacao.setItem(item);
+        aplicacao.setEstoque(estoque);
         aplicacao.setQuantidade(request.quantidade());
         aplicacao.setPrecoNoMomento(preco);
         ordem.getItensAplicados().add(aplicacao);
 
         // Baixa automática no estoque (lança 409 se não houver saldo)
         movimentacaoEstoqueService.registrar(new MovimentacaoRequest(
-                request.estoqueId(),
+                estoque.getId(),
                 item.getId(),
                 TipoMovimentacao.SAIDA,
                 request.quantidade(),
@@ -158,6 +163,7 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
             throw new BusinessException("Não é possível cancelar uma OS com status " + ordem.getStatus());
         }
         ordem.setStatus(StatusOrdemServico.CANCELADA);
+        estornarItens(ordem);
         return ordemServicoMapper.toResponse(ordemServicoRepository.saveAndFlush(ordem));
     }
 
@@ -168,7 +174,25 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
         if (ordem.getStatus() != StatusOrdemServico.ABERTA) {
             throw new BusinessException("Só é possível excluir uma OS com status ABERTA; use o cancelamento");
         }
+        estornarItens(ordem);
         ordemServicoRepository.delete(ordem);
+    }
+
+    /**
+     * Devolve ao estoque os itens que haviam sido debitados por esta OS.
+     */
+    private void estornarItens(OrdemServico ordem) {
+        for (AplicacaoItem aplicacao : ordem.getItensAplicados()) {
+            if (aplicacao.getEstoque() == null) {
+                continue;
+            }
+            movimentacaoEstoqueService.registrar(new MovimentacaoRequest(
+                    aplicacao.getEstoque().getId(),
+                    aplicacao.getItem().getId(),
+                    TipoMovimentacao.ENTRADA,
+                    aplicacao.getQuantidade(),
+                    "Estorno da OS " + ordem.getId()));
+        }
     }
 
     private void exigirEditavel(OrdemServico ordem) {
@@ -178,7 +202,9 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
         }
     }
 
-    private OrdemServico buscarEntidade(Long id) {
+    @Override
+    @Transactional(readOnly = true)
+    public OrdemServico buscarEntidade(Long id) {
         return ordemServicoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(RECURSO, id));
     }
