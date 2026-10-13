@@ -34,7 +34,6 @@ build/
 
 ### Maven ###
 .mvn/timing.properties
-.mvn/wrapper/maven-wrapper.jar
 
 ### Env & Logs ###
 .env
