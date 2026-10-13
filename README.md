@@ -147,7 +147,9 @@ src/main/java/br/com/gearedlogistics/gearedlogistics
     ├── autenticacao/       #   Login e emissão do token JWT
     ├── usuarios/           #   Acesso ao sistema (login)
     ├── clientes/           #   Cliente (+ endereço embutido e telefones)
-    └── veiculos/           #   Veículo (vinculado a um Cliente)
+    ├── veiculos/           #   Veículo (vinculado a um Cliente)
+    ├── catalogo/           #   Item de catálogo: Peça ou Material (+ preços e margem)
+    └── estoque/            #   Estoque, PosicaoEstoque e MovimentacaoEstoque
 ```
 
 Cada módulo é autossuficiente: contém suas próprias camadas `Controller → Service → Repository`
@@ -251,6 +253,47 @@ Exemplo (criar veículo do cliente 1):
 curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/veiculos \
   -H "Content-Type: application/json" \
   -d '{"placa":"ABC1D23","marca":"Chevrolet","modelo":"Onix","tipo":"Carro","anoFabricacao":2020,"clienteId":1}'
+```
+
+### Itens (peças e materiais)
+
+| Método | Rota | Descrição | Status |
+| --- | --- | --- | --- |
+| `POST` | `/api/itens` | Cria um item (`PECA` ou `MATERIAL`) | `201` / `400` / `409` |
+| `GET` | `/api/itens?nome=&tipo=&page=0&size=20` | Lista paginada (filtros opcionais) | `200` |
+| `GET` | `/api/itens/{id}` | Busca por id | `200` / `404` |
+| `PUT` | `/api/itens/{id}` | Atualiza um item | `200` / `404` |
+| `DELETE` | `/api/itens/{id}` | Remove um item | `204` / `404` / `409` |
+
+> Cada item devolve `margemLucro` calculada: `(precoVenda - precoCusto) / precoVenda * 100`.
+
+### Estoques
+
+| Método | Rota | Descrição | Status |
+| --- | --- | --- | --- |
+| `POST` | `/api/estoques` | Cria um local de estoque | `201` |
+| `GET` | `/api/estoques?nome=&page=0&size=20` | Lista paginada | `200` |
+| `GET` | `/api/estoques/{id}` | Busca por id | `200` / `404` |
+| `GET` | `/api/estoques/{id}/posicoes` | Saldo atual dos itens no local | `200` / `404` |
+| `PUT` | `/api/estoques/{id}` | Atualiza um local | `200` / `404` |
+| `DELETE` | `/api/estoques/{id}` | Remove um local | `204` / `404` / `409` |
+
+### Movimentações de estoque
+
+| Método | Rota | Descrição | Status |
+| --- | --- | --- | --- |
+| `POST` | `/api/movimentacoes` | Registra `ENTRADA`, `SAIDA` ou `AJUSTE` | `201` / `400` / `404` / `409` |
+| `GET` | `/api/movimentacoes?itemId=&estoqueId=&tipo=&page=0&size=20` | Histórico (filtros opcionais) | `200` |
+
+- `ENTRADA` soma ao saldo, `SAIDA` subtrai (erro **409** se não houver saldo) e `AJUSTE` define o saldo.
+- A resposta inclui `quantidadeResultante` (saldo após o movimento).
+
+Exemplo (entrada de estoque):
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/api/movimentacoes \
+  -H "Content-Type: application/json" \
+  -d '{"estoqueId":1,"itemId":1,"tipo":"ENTRADA","quantidade":50,"motivo":"compra do fornecedor"}'
 ```
 
 ### Padrão de erro
